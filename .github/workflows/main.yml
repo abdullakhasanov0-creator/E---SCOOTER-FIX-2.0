@@ -1,0 +1,30 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare project
+        run: |
+          Z=$(find . -iname '*.zip' -not -path './proj/*' | head -1)
+          unzip -q "$Z" -d proj
+          S=$(find proj -name settings.gradle.kts | head -1)
+          echo "PROJ=$(dirname "$S")" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+      - run: gradle --no-daemon assembleDebug
+        working-directory: ${{ env.PROJ }}
+      - run: cp "${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk" E-scooter-App-1.01.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: E-scooter-App-1.01
+          path: E-scooter-App-1.01.apk
